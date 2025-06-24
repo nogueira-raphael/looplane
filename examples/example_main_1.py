@@ -1,0 +1,27 @@
+import asyncio
+from looplane.task import register_task
+from looplane.queue import TaskQueue
+from looplane.worker import TaskWorker
+
+
+@register_task
+async def sample_task(name: str):
+    print(f"Processing: {name}")
+    await asyncio.sleep(1)
+    print(f"Finished: {name}")
+
+
+async def main():
+    queue = TaskQueue(persist=True)
+    worker = TaskWorker(queue)
+
+    await queue.enqueue(sample_task, "task 1", retries=2)
+    await queue.enqueue(sample_task, "task 2", retries=1)
+
+    asyncio.create_task(worker.start())
+    await asyncio.sleep(3)
+    worker.stop()
+
+
+if __name__ == "__main__":
+    asyncio.run(main())

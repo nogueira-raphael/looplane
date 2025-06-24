@@ -1,0 +1,46 @@
+# Byte-compiled / optimized / DLL files
+__pycache__/
+*.py[cod]
+*$py.class
+
+# Local virtual environment (if using in-project venv)
+.venv/
+
+# Poetry-related files and caches
+.cache/
+.poetry/
+
+# Build artifacts
+dist/
+build/
+*.egg-info/
+.eggs/
+
+# Test output
+.coverage
+htmlcov/
+.tox/
+.pytest_cache/
+
+# Mypy and Ruff caches
+.mypy_cache/
+ruff_cache/
+
+# Editor and IDE settings
+.vscode/
+.idea/
+
+# Temporary or backup files
+*.log
+*.tmp
+*.bak
+*.swp
+*.swo
+
+# LMDB or JSONL task storage
+*/task_queue_lmdb/
+*/task_queue.jsonl
+
+# OS-generated files
+.DS_Store
+Thumbs.db
