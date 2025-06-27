@@ -1,10 +1,14 @@
 import asyncio
 import uuid
+import logging
 from datetime import datetime
 from typing import Callable, Optional, Union
 
 from looplane.storage.base import StorageBackend
 from looplane.task import Task, get_task
+
+
+_logger = logging.getLogger(__name__)
 
 
 class TaskQueue:
@@ -72,13 +76,13 @@ class TaskQueue:
             task.updated_at = datetime.utcnow()
             # TODO: need to see a better way to handle with tasks that ends retry
             if task.retries_left > 0:
+                task.status = Task.PENDING
                 await self.storage.update(task)
+                _logger.warning(f"[WARN] Task {task.id} failed. Retrying... ({task.retries_left} retries left)")
             else:
                 await self.storage.delete(task.id)
 
-            raise Exception(
-                f"[ERROR] Task {task.id} failed with error: {error}"
-            ) from error
+            _logger.error(f"[ERROR] Task {task.id} permanently failed: {error}")
 
     async def run_task(self, task: Task):
         return await self._run_task(task)

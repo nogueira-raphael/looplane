@@ -2,7 +2,7 @@ import asyncio
 from looplane.task import register_task
 from looplane.queue import TaskQueue
 from looplane.worker import TaskWorker
-from looplane.storage.memory import InMemoryStorage
+from looplane.storage.inmemory import InMemoryStorage
 
 
 
