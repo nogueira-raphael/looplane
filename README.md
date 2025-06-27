@@ -13,10 +13,8 @@ It combines an in-memory queue with optional persistent storage using [LMDB](htt
 - 💾 Optional local persistence via LMDB
 - 🧠 Decorator-based task registration
 - 🔁 Built-in retry and timeout support
-- 🧰 Comes pre-configured with:
-  - [Poetry](https://python-poetry.org/) for dependency management
-  - [Black](https://github.com/psf/black), [Ruff](https://github.com/astral-sh/ruff), and [Mypy](http://mypy-lang.org/) for code quality
-  - Makefile with common dev commands
+- ⚙️ Pluggable storage backends
+
 
 ---
 
@@ -60,9 +58,16 @@ await queue.enqueue(say_hello, "world", retries=2)
 ## 📦 Roadmap (WIP)
 - Result persistence
 - Prioritized task queue
-- Web UI for inspection
+- Web UI dashboard (FastAPI + Tailwind)
 - CLI tool
 - More storage backends (SQLite, JSONL)
+- Result persistence and inspection
+- CLI tool to enqueue tasks, inspect queue, view errors
+- Support for gRPC-based client/worker communication
+- Plugin system for storage backends
+- Retry backoff strategy
+- Task metrics and instrumentation
+- DAG-style pipeline execution and orchestration
 
 ---
 ## 📝 License

@@ -2,6 +2,8 @@ import asyncio
 from looplane.task import register_task
 from looplane.queue import TaskQueue
 from looplane.worker import TaskWorker
+from looplane.storage.memory import InMemoryStorage
+
 
 
 @register_task
@@ -12,11 +14,11 @@ async def sample_task(name: str):
 
 
 async def main():
-    queue = TaskQueue(persist=True)
+    queue = TaskQueue(storage=InMemoryStorage())
     worker = TaskWorker(queue)
 
     await queue.enqueue(sample_task, "task 1", retries=2)
-    await queue.enqueue(sample_task, "task 2", retries=1)
+    await queue.enqueue("sample_task", "task 2", retries=1)
 
     asyncio.create_task(worker.start())
     await asyncio.sleep(3)

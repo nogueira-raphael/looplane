@@ -1,45 +1,58 @@
 import asyncio
-from typing import Callable, Optional
+import uuid
+from datetime import datetime
+from typing import Callable, Optional, Union
 
-from looplane.storages.lmdb_storage import LMDBStorage
-from looplane.task import Task
+from looplane.storage.base import StorageBackend
+from looplane.task import Task, get_task
 
 
 class TaskQueue:
-    def __init__(self, use_memory_queue: bool = True, persist: bool = True):
-        self._use_memory_queue = use_memory_queue
-        self._persist = persist
-        self._queue: Optional[asyncio.Queue] = (
-            asyncio.Queue() if use_memory_queue else None
-        )
-        self.storage = LMDBStorage() if persist else None
+    def __init__(
+        self,
+        storage: StorageBackend,
+        batch_size: int = 10,
+    ):
+        self._queue: asyncio.Queue = asyncio.Queue()
+        self.storage = storage
+        self.batch_size = batch_size
 
     async def enqueue(
-        self, func: Callable, *args, retries=3, timeout: Optional[int] = None, **kwargs
+        self,
+        func: Union[str, Callable],
+        *args,
+        retries: int = 3,
+        timeout: Optional[int] = None,
+        **kwargs,
     ) -> Task:
-        task = Task.create(
-            func=func, args=args, kwargs=kwargs, retries=retries, timeout=timeout
+        if callable(func):
+            func_name = func.__name__
+        elif isinstance(func, str):
+            func_name = func
+        else:
+            raise ValueError("func must be a registered function or its name as string")
+
+        task = Task(
+            id=str(uuid.uuid4()),
+            func_name=func_name,
+            func=get_task(func_name),
+            args=args,
+            kwargs=kwargs,
+            retries_left=retries,
+            timeout=timeout,
         )
-
-        if self._persist and self.storage:
-            await self.storage.save(task)
-
-        if self._use_memory_queue and self._queue:
-            await self._queue.put(task)
-
+        await self.storage.save(task)
         return task
 
     async def get_next_task(self) -> Optional[Task]:
-        if self._use_memory_queue and self._queue and not self._queue.empty():
-            return await self._queue.get()
-
-        if self._persist and self.storage:
-            tasks = await self.storage.load_all()
+        if self._queue.empty():
+            tasks = await self.storage.fetch_batch(self.batch_size)
             for task in tasks:
-                if task.status == Task.PENDING:
-                    return task
+                task.status = Task.RUNNING
+                await self.storage.update(task)
+                await self._queue.put(task)
 
-        return None
+        return await self._queue.get()
 
     async def run_immediately(self, func: Callable, *args, **kwargs):
         task = Task.create(func=func, args=args, kwargs=kwargs)
@@ -48,27 +61,24 @@ class TaskQueue:
     async def _run_task(self, task: Task):
         try:
             task.status = Task.RUNNING
-            if task.func:  # TODO: improve this
-                if task.timeout:
-                    await asyncio.wait_for(
-                        task.func(*task.args, **task.kwargs), timeout=task.timeout
-                    )
-                else:
-                    await task.func(*task.args, **task.kwargs)
-            else:
-                raise Exception("Task func must have function.")  # TODO: improve this
+            await self.storage.update(task)
+            await task.func(*task.args, **task.kwargs)
             task.status = Task.DONE
-        except Exception:  # noqa
+            await self.storage.delete(task.id)
+        # TODO: create specific exceptions
+        except Exception as error:  # noqa
             task.retries_left -= 1
             task.status = Task.FAILED
+            task.updated_at = datetime.utcnow()
+            # TODO: need to see a better way to handle with tasks that ends retry
             if task.retries_left > 0:
-                if self._persist and self.storage:
-                    await self.storage.save(task)
-                if self._use_memory_queue and self._queue:
-                    await self._queue.put(task)
-        else:
-            if self._persist and self.storage:
-                await self.storage.save(task)
+                await self.storage.update(task)
+            else:
+                await self.storage.delete(task.id)
+
+            raise Exception(
+                f"[ERROR] Task {task.id} failed with error: {error}"
+            ) from error
 
     async def run_task(self, task: Task):
         return await self._run_task(task)
