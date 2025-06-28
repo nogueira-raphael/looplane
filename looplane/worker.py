@@ -1,6 +1,6 @@
 import logging
-from looplane.queue import TaskQueue
 
+from looplane.queue import TaskQueue
 
 _logger = logging.getLogger(__name__)
 

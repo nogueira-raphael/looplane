@@ -1,13 +1,12 @@
 import asyncio
-import uuid
 import logging
+import uuid
 from datetime import datetime
 from typing import Callable, Optional, Union
 
+from looplane.exceptions import TaskExecutionError, TaskRetryExhaustedError
 from looplane.storage.base import StorageBackend
 from looplane.task import Task, get_task
-from looplane.exceptions import TaskExecutionError, TaskRetryExhaustedError
-
 
 _logger = logging.getLogger(__name__)
 
@@ -70,6 +69,9 @@ class TaskQueue:
         try:
             task.status = Task.RUNNING
             await self.storage.update(task)
+            # TODO: implement else handling or improve this design
+            if not callable(task.func):
+                raise TypeError(f"Task {task.id} has a non-callable func: {task.func}")
             await task.func(*task.args, **task.kwargs)
             task.status = Task.DONE
             await self.storage.delete(task.id)
@@ -80,7 +82,9 @@ class TaskQueue:
             if task.retries_left > 0:
                 task.status = Task.PENDING
                 await self.storage.update(task)
-                _logger.warning(f"[WARN] Task {task.id} failed. Retrying... ({task.retries_left} retries left)")
+                _logger.warning(
+                    f"[WARN] Task {task.id} failed. Retrying... ({task.retries_left} retries left)"
+                )
                 raise TaskExecutionError(str(error)) from error
             else:
                 await self.storage.delete(task.id)
