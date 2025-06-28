@@ -78,39 +78,37 @@ class TaskQueue:
             if not callable(task.func):
                 raise TypeError(f"Task {task.id} has a non-callable func: {task.func}")
             result = await task.func(*task.args, **task.kwargs)
-            task.results.append(
-                TaskResult(
-                    success=True,
-                    value=result,
-                    started_at=start_time,
-                    fetched_from_storage_at=start_time,  # TODO: it's not correct yet
-                    finished_at=datetime.utcnow(),
-                )
+            task_result = TaskResult(
+                task_id=task.id,
+                success=True,
+                value=result,
+                started_at=start_time,
+                fetched_from_storage_at=start_time,  # TODO: it's not correct yet
+                finished_at=datetime.utcnow(),
             )
             task.status = Task.DONE
             if self.result_backend:
-                await self.result_backend.store_result(task.id, task.results[-1])
+                await self.result_backend.save(task_result)
             await self.storage.delete(task.id)
 
         except Exception as error:  # noqa
             task.retries_left -= 1
             task.status = Task.FAILED
             task.updated_at = datetime.utcnow()
-            task.results.append(
-                TaskResult(
-                    success=False,
-                    error=str(error),
-                    started_at=start_time,
-                    fetched_from_storage_at=start_time,  # TODO: it's not correct yet
-                    finished_at=datetime.utcnow(),
-                )
+            task_result = TaskResult(
+                task_id=task.id,
+                success=False,
+                error=str(error),
+                started_at=start_time,
+                fetched_from_storage_at=start_time,  # TODO: it's not correct yet
+                finished_at=datetime.utcnow(),
             )
 
             if task.retries_left > 0:
                 task.status = Task.PENDING
                 await self.storage.update(task)
                 if self.result_backend:
-                    await self.result_backend.store_result(task.id, task.results[-1])
+                    await self.result_backend.save(task_result)
                 _logger.warning(
                     f"[WARN] Task {task.id} failed. Retrying... ({task.retries_left} retries left)"
                 )
@@ -118,7 +116,7 @@ class TaskQueue:
             else:
                 await self.storage.delete(task.id)
                 if self.result_backend:
-                    await self.result_backend.store_result(task.id, task.results[-1])
+                    await self.result_backend.save(task_result)
                 _logger.error(f"[ERROR] Task {task.id} permanently failed: {error}")
                 raise TaskRetryExhaustedError(str(error)) from error
 

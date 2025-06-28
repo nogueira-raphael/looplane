@@ -35,9 +35,9 @@ async def main():
     await asyncio.sleep(5)
     worker.stop()
 
-    results = await queue.result_backend.get_result(task_id_holder["id"])  # noqa
+    results = await queue.result_backend.get(task_id_holder["id"])  # noqa
     for result in results:
-        print(f"✔️ Success: {result.success}, Value: {result.value}, Error: {result.error}")
+        print(result)
 
 
 if __name__ == "__main__":

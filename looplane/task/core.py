@@ -17,13 +17,27 @@ class TaskResult:
     finished_at: datetime
     started_at: datetime = field(compare=False)
     fetched_from_storage_at: datetime = field(compare=False)
-
     success: bool = field(compare=False)
+    task_id: str = field(compare=False)
+
+    id: str = field(default_factory=lambda: str(uuid.uuid4()))
     value: Optional[Any] = field(default=None, compare=False)
     error: Optional[str] = field(default=None, compare=False)
 
+    def __str__(self) -> str:
+        return (
+            f"TaskResult {self.task_id[:8]} | "
+            f"Success: {self.success} | "
+            f"Duration: {self.duration:.2f}s | "
+            f"Value: {self.value} | "
+            f"Error: {self.error or '-'}"
+        )
+
+    def __repr__(self) -> str:
+        return self.__str__()
+
     @property
-    def execution_time(self) -> Optional[float]:
+    def duration(self) -> Optional[float]:
         """Time in seconds between start and finish time"""
         if self.started_at and self.finished_at:
             return (self.finished_at - self.started_at).total_seconds()

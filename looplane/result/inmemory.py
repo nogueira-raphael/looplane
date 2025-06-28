@@ -7,10 +7,17 @@ from looplane.task.core import TaskResult
 
 class InMemoryResultBackend(AbstractResultBackend):
     def __init__(self):
-        self.results: Dict[str, List[TaskResult]] = defaultdict(list)
+        self._by_task: Dict[str, List[TaskResult]] = defaultdict(list)
+        self._by_id: dict[str, TaskResult] = {}
 
-    async def store_result(self, task_id: str, result: TaskResult):
-        self.results[task_id].append(result)
+    async def save(self, result: TaskResult):
+        self._by_id[result.id] = result
+        if not self._by_task[result.id]:
+            self._by_task[result.id] = []
+        self._by_task[result.task_id].append(result)
 
-    async def get_result(self, task_id: str) -> List[TaskResult]:
-        return self.results.get(task_id, [])
+    async def get(self, task_id: str) -> List[TaskResult]:
+        return sorted(self._by_task.get(task_id, []), key=lambda r: r.finished_at)
+
+    async def results(self) -> List[TaskResult]:
+        return sorted(self._by_id.values(), key=lambda r: r.finished_at)
