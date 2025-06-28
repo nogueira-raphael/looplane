@@ -1,3 +1,4 @@
+import asyncio
 import logging
 
 from looplane.queue import TaskQueue
@@ -23,6 +24,7 @@ class TaskWorker:
         while self.running:
             task = await self.queue.get_next_task()
             if task is None:
+                await asyncio.sleep(0.1)
                 continue
             try:
                 await self.queue.run_task(task)

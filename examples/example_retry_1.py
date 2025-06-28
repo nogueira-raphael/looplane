@@ -7,6 +7,8 @@ from looplane.storage.inmemory import InMemoryStorage
 
 
 attempts = {"count": 0}
+task_id_holder = {"id": None}
+
 
 @register_task
 async def flaky_task():
@@ -18,15 +20,24 @@ async def flaky_task():
     if attempts["count"] < 3:
         raise Exception(f"Failure {attempts.get('count')}")
 
-    print("Task succeeded!")
+    return "Success!"
+
 
 async def main():
-    queue = TaskQueue(storage=InMemoryStorage())
+    storage = InMemoryStorage()
+    queue = TaskQueue(storage=storage)
     worker = TaskWorker(queue)
 
-    await queue.enqueue(flaky_task, retries=3)
+    task = await queue.enqueue(flaky_task, retries=3)
+    task_id_holder["id"] = task.id  # type: ignore
 
-    await worker.start()
+    asyncio.create_task(worker.start())
+    await asyncio.sleep(5)
+    worker.stop()
+
+    results = await queue.result_backend.get_result(task_id_holder["id"])  # noqa
+    for result in results:
+        print(f"✔️ Success: {result.success}, Value: {result.value}, Error: {result.error}")
 
 
 if __name__ == "__main__":

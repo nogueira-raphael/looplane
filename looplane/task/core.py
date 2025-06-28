@@ -12,7 +12,7 @@ class TaskStatus(StrEnum):
     PENDING = "PENDING"
 
 
-@dataclass(order=True)
+@dataclass(frozen=True, order=True)
 class TaskResult:
     finished_at: datetime
     started_at: datetime = field(compare=False)

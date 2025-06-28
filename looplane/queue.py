@@ -5,7 +5,7 @@ from datetime import datetime
 from typing import Callable, Optional, Union
 
 from looplane.exceptions import TaskExecutionError, TaskRetryExhaustedError
-from looplane.result import AbstractResultBackend
+from looplane.result import AbstractResultBackend, InMemoryResultBackend
 from looplane.storage.base import StorageBackend
 from looplane.task import Task, TaskResult, get_task
 
@@ -21,7 +21,7 @@ class TaskQueue:
     ):
         self._queue: asyncio.Queue = asyncio.Queue()
         self.storage = storage
-        self.result_backend = result_backend
+        self.result_backend = result_backend or InMemoryResultBackend()
         self.batch_size = batch_size
 
     async def enqueue(
