@@ -1,10 +1,22 @@
+import logging
 from looplane.queue import TaskQueue
+
+
+_logger = logging.getLogger(__name__)
 
 
 class TaskWorker:
     def __init__(self, queue: TaskQueue):
         self.queue = queue
-        self.running = False
+        self._running = False
+
+    @property
+    def running(self):
+        return self._running
+
+    @running.setter
+    def running(self, value):
+        self._running = value
 
     async def start(self):
         self.running = True
@@ -12,7 +24,10 @@ class TaskWorker:
             task = await self.queue.get_next_task()
             if task is None:
                 continue
-            await self.queue.run_task(task)
+            try:
+                await self.queue.run_task(task)
+            except Exception as error:  # noqa
+                _logger.error(f"[WORKER] Error while running task {task.id}: {error}")
 
     def stop(self):
         self.running = False
