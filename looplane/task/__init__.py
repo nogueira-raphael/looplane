@@ -1,8 +1,9 @@
-from .core import Task
+from .core import Task, TaskResult
 from .register import TaskRegistry
 
 __all__ = [
     "Task",
+    "TaskResult",
     "register_task",
     "get_task",
     "task_registry",
