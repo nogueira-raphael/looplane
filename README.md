@@ -15,6 +15,54 @@ It combines an in-memory queue with optional persistent storage using [LMDB](htt
 - 🔁 Built-in retry and timeout support
 - ⚙️ Pluggable storage backends
 
+---
+## 📦 Components
+
+- **TaskQueue**: Pulls and dispatches tasks from storage to execution.
+- **TaskWorker**: Processes tasks and handles retries/failures.
+- **Storage Backend**: Manages pending tasks.
+- **Result Backend**: Persists task results (success or failure).
+
+---
+## 🧩 Architecture Overview (WIP)
+
+This diagram shows the current design of the task processing system. It serves as a utility to help developers and contributors quickly understand how the main components interact.
+
+```mermaid
+flowchart TD
+    %% PRODUCER
+    subgraph User Interaction
+        A[User or App] --> B[Enqueue Task]
+    end
+
+    %% STORAGE
+    B --> C[Save Task to Storage]
+    C --> D[TaskWorker Starts]
+    D --> E[Request Next Task]
+
+    %% QUEUE PROCESSING
+    subgraph Queue Engine
+        E --> F[Fetch Batch from Storage]
+        F --> G[Add to In-Memory Queue]
+        G --> H[Run Task]
+    end
+
+    %% TASK EXECUTION
+    H --> I[Execute task.func]
+    I -->|Success| J[Create Success Result]
+    I -->|Error| K[Create Error Result]
+
+    %% RESULTS & STORAGE UPDATE
+    J --> L[Save to Result Backend]
+    K --> L
+
+    J --> M[Delete Task from Storage]
+    K -->|Retries Remaining| N[Update Task in Storage]
+    K -->|No Retries Left| M
+
+    M --> O[Task Finished or Permanently Failed]
+    N --> O
+```
 
 ---
 
