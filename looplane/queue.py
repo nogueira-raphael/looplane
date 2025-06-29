@@ -2,7 +2,7 @@ import asyncio
 import logging
 import uuid
 from datetime import datetime
-from typing import Callable, Optional, Union
+from typing import Any, Callable, Optional, Union
 
 from looplane.exceptions import TaskExecutionError, TaskRetryExhaustedError
 from looplane.result import AbstractResultBackend, InMemoryResultBackend
@@ -68,7 +68,7 @@ class TaskQueue:
                 await self.storage.update(task)
                 await self._queue.put(task)
 
-        results = []
+        results: list[Any] = []
         while not self._queue.empty() and len(results) < limit:
             results.append(await self._queue.get())
         return results

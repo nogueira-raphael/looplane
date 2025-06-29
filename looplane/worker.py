@@ -1,5 +1,6 @@
 import asyncio
 import logging
+from typing import Union
 
 from looplane.queue import TaskQueue
 from looplane.task import Task
@@ -12,7 +13,7 @@ class TaskWorker:
         self.queue = queue
         self.max_concurrent_tasks = max_concurrent_tasks
         self._running = False
-        self._main_loop_task: asyncio.Task | None = None
+        self._main_loop_task: Union[asyncio.Task, None] = None
         self._running_tasks: set[asyncio.Task] = set()
 
     @property
@@ -50,15 +51,13 @@ class TaskWorker:
                 continue
 
             done, _ = await asyncio.wait(
-                self._running_tasks,
-                return_when=asyncio.FIRST_COMPLETED
+                self._running_tasks, return_when=asyncio.FIRST_COMPLETED
             )
             self._running_tasks.difference_update(done)
 
     def start(self):
         self._running = True
         self._main_loop_task = asyncio.create_task(self._run_loop())
-
 
     def stop(self):
         self.running = False
