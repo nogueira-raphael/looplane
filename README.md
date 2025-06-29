@@ -107,7 +107,6 @@ await queue.enqueue(say_hello, "world", retries=2)
 - Result persistence
 - Prioritized task queue
 - Web UI dashboard (FastAPI + Tailwind)
-- CLI tool
 - More storage backends (SQLite, JSONL)
 - Result persistence and inspection
 - CLI tool to enqueue tasks, inspect queue, view errors
