@@ -58,8 +58,20 @@ class TaskQueue:
                 task.status = Task.RUNNING
                 await self.storage.update(task)
                 await self._queue.put(task)
-
         return await self._queue.get()
+
+    async def fetch_up_to(self, limit: int) -> list[Task]:
+        if self._queue.empty():
+            tasks = await self.storage.fetch_batch(limit)
+            for task in tasks:
+                task.status = Task.RUNNING
+                await self.storage.update(task)
+                await self._queue.put(task)
+
+        results = []
+        while not self._queue.empty() and len(results) < limit:
+            results.append(await self._queue.get())
+        return results
 
     async def run_immediately(self, func: Callable, *args, **kwargs):
         task = Task.create(func=func, args=args, kwargs=kwargs)

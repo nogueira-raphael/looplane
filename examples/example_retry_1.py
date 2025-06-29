@@ -31,7 +31,7 @@ async def main():
     task = await queue.enqueue(flaky_task, retries=3)
     task_id_holder["id"] = task.id  # type: ignore
 
-    asyncio.create_task(worker.start())
+    worker.start()
     await asyncio.sleep(5)
     worker.stop()
 

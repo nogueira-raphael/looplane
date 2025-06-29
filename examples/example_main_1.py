@@ -20,7 +20,7 @@ async def main():
     await queue.enqueue(sample_task, "task 1", retries=2)
     await queue.enqueue("sample_task", "task 2", retries=1)
 
-    asyncio.create_task(worker.start())
+    worker.start()
     await asyncio.sleep(3)
     worker.stop()
 
