@@ -9,6 +9,14 @@ _logger = logging.getLogger(__name__)
 
 
 class TaskWorker:
+    """Processes tasks from a TaskQueue with configurable concurrency.
+
+    The TaskWorker runs an async loop that:
+    - Fetches tasks from the queue up to its capacity
+    - Executes tasks concurrently (up to max_concurrent_tasks)
+    - Handles task completion and continues processing
+    """
+
     def __init__(self, queue: TaskQueue, max_concurrent_tasks: int = 10):
         self.queue = queue
         self.max_concurrent_tasks = max_concurrent_tasks
@@ -25,20 +33,20 @@ class TaskWorker:
         self._running = value
 
     @property
-    def capacity(self):
+    def capacity(self) -> int:
         return self.max_concurrent_tasks - len(self._running_tasks)
 
     async def wait_until_done(self):
         if self._main_loop_task:
             await self._main_loop_task
 
-    async def _run_single_task(self, task: Task):
+    async def _run_single_task(self, task: Task) -> None:
         try:
             await self.queue.run_task(task)
         except Exception as error:  # noqa
             _logger.error(f"[WORKER] Error while running task {task.id}: {error}")
 
-    async def _run_loop(self):
+    async def _run_loop(self) -> None:
         while self.running or self._running_tasks:
             if self.capacity > 0:
                 tasks = await self.queue.fetch_up_to(self.capacity)

@@ -13,6 +13,15 @@ _logger = logging.getLogger(__name__)
 
 
 class TaskQueue:
+    """Manages task enqueueing, fetching, and execution.
+
+    The TaskQueue is responsible for:
+    - Accepting tasks and persisting them to storage
+    - Fetching batches of pending tasks from storage
+    - Running tasks and handling success/failure outcomes
+    - Coordinating with the result backend to store task results
+    """
+
     def __init__(
         self,
         storage: StorageBackend,
@@ -45,6 +54,7 @@ class TaskQueue:
             func=get_task(func_name),
             args=args,
             kwargs=kwargs,
+            max_retries=retries,
             retries_left=retries,
             timeout=timeout,
         )
@@ -73,15 +83,16 @@ class TaskQueue:
             results.append(await self._queue.get())
         return results
 
-    async def run_immediately(self, func: Callable, *args, **kwargs):
+    async def run_immediately(self, func: Callable, *args: Any, **kwargs: Any) -> None:
         task = Task.create(func=func, args=args, kwargs=kwargs)
         return await self._run_task(task)
 
-    async def run_task(self, task: Task):
+    async def run_task(self, task: Task) -> None:
         return await self._run_task(task)
 
-    async def _run_task(self, task: Task):
+    async def _run_task(self, task: Task) -> None:
         start_time = datetime.utcnow()
+        current_attempt = task.attempt
         try:
             task.status = Task.RUNNING
             task.updated_at = start_time
@@ -92,11 +103,14 @@ class TaskQueue:
             result = await task.func(*task.args, **task.kwargs)
             task_result = TaskResult(
                 task_id=task.id,
+                func_name=task.func_name,
                 success=True,
                 value=result,
                 started_at=start_time,
                 fetched_from_storage_at=start_time,  # TODO: it's not correct yet
                 finished_at=datetime.utcnow(),
+                attempt=current_attempt,
+                max_retries=task.max_retries,
             )
             task.status = Task.DONE
             if self.result_backend:
@@ -109,11 +123,14 @@ class TaskQueue:
             task.updated_at = datetime.utcnow()
             task_result = TaskResult(
                 task_id=task.id,
+                func_name=task.func_name,
                 success=False,
                 error=str(error),
                 started_at=start_time,
                 fetched_from_storage_at=start_time,  # TODO: it's not correct yet
                 finished_at=datetime.utcnow(),
+                attempt=current_attempt,
+                max_retries=task.max_retries,
             )
 
             if task.retries_left > 0:
