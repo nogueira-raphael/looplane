@@ -7,6 +7,14 @@ from looplane.task import Task
 
 
 class InMemoryStorage(StorageBackend):
+    """In-memory storage backend for tasks.
+
+    Stores tasks in a dictionary. Data is lost when the process ends.
+    Suitable for development, testing, and transient workloads.
+    """
+
+    _IS_TRANSIENT = True
+
     def __init__(self):
         self._tasks: Dict[str, Task] = {}
         self.lock = Lock()
@@ -36,6 +44,14 @@ class InMemoryStorage(StorageBackend):
                 t for t in self._tasks.values() if t.status == Task.PENDING
             ]
             return pending_tasks[:batch_size]
+
+    async def count(self) -> int:
+        async with self.lock:
+            return len(self._tasks)
+
+    async def clear(self) -> None:
+        async with self.lock:
+            self._tasks.clear()
 
 
 __all__ = ["InMemoryStorage"]
