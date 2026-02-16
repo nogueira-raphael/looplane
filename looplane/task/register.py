@@ -5,8 +5,21 @@ class TaskRegistry:
     def __init__(self):
         self._registry: Dict[str, Callable] = {}
 
+    def _fqn(self, func: Callable) -> str:
+        return f"{func.__module__}.{func.__qualname__}"
+
     def register(self, func: Callable) -> Callable:
-        self._registry[func.__name__] = func
+        # primary key
+        fqn = self._fqn(func)
+        self._registry[fqn] = func
+
+        # backward compatibility alias
+        short_name = func.__name__
+
+        # IMPORTANT: use _registry (with underscore)
+        if short_name not in self._registry:
+            self._registry[short_name] = func
+
         return func
 
     def get(self, name: str) -> Callable:
@@ -16,4 +29,4 @@ class TaskRegistry:
         return task_function
 
     def all(self) -> Dict[str, Callable]:
-        return self._registry
+        return dict(self._registry)
