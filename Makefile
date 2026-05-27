@@ -18,7 +18,7 @@ typecheck:
 check: format-check lint typecheck
 
 run-example:
-	poetry run python examples/main.py
+	poetry run python examples/example_main_1.py
 
 clean:
 	find . -type f -name "*.py[co]" -delete
